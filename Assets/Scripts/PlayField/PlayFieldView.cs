@@ -5,7 +5,7 @@ using UnityEditor;
 #endif
 
 /// <summary>
-/// BasePlayField 데이터 로직을 생성하고, 하위 세부 레이어(Fill, Grid, Border, Overlay 등)의 
+/// BasePlayField 데이터 로직을 생성하고, 하위 세부 레이어(Background, Character, Grid, Border, Overlay 등)의 
 /// 감마, 알파(투명도), 색상을 실시간으로 제어하는 View 컴포넌트
 /// </summary>
 [ExecuteAlways]
@@ -16,27 +16,33 @@ public class PlayFieldView : MonoBehaviour
     [SerializeField] private DefaultPlayField.CoordinateSystemType _coordinateSystem = DefaultPlayField.CoordinateSystemType.RoundToInt;
 
     [Header("세부 레이어 (자식 오브젝트 추가 시 자동 연결)")]
-    [SerializeField] private SpriteRenderer _fillRenderer;
+    [SerializeField] private SpriteRenderer _backgroundRenderer;
+    [SerializeField] private SpriteRenderer _characterRenderer;
     [SerializeField] private SpriteRenderer _gridRenderer;
     [SerializeField] private SpriteRenderer _borderRenderer;
     [SerializeField] private SpriteRenderer _overlayRenderer;
 
-    [Header("1. Fill (배경) 설정")]
-    [SerializeField] private Color _fillColor = Color.white;
-    [Range(0.1f, 3.0f)] [SerializeField] private float _fillGamma = 1.0f;
-    [Range(0.0f, 1.0f)] [SerializeField] private float _fillAlpha = 1.0f;
+    [Header("1. Background (배경) 설정")]
+    [SerializeField] private Color _backgroundColor = Color.white;
+    [Range(0.1f, 3.0f)] [SerializeField] private float _backgroundGamma = 1.0f;
+    [Range(0.0f, 1.0f)] [SerializeField] private float _backgroundAlpha = 1.0f;
 
-    [Header("2. Grid (격자무늬) 설정")]
+    [Header("2. Character (캐릭터) 설정")]
+    [SerializeField] private Color _characterColor = Color.white;
+    [Range(0.1f, 3.0f)] [SerializeField] private float _characterGamma = 1.0f;
+    [Range(0.0f, 1.0f)] [SerializeField] private float _characterAlpha = 1.0f;
+
+    [Header("3. Grid (격자무늬) 설정")]
     [SerializeField] private Color _gridColor = Color.white;
     [Range(0.1f, 3.0f)] [SerializeField] private float _gridGamma = 1.0f;
     [Range(0.0f, 1.0f)] [SerializeField] private float _gridAlpha = 1.0f;
 
-    [Header("3. Border (테두리) 설정")]
+    [Header("4. Border (테두리) 설정")]
     [SerializeField] private Color _borderColor = Color.white;
     [Range(0.1f, 3.0f)] [SerializeField] private float _borderGamma = 1.0f;
     [Range(0.0f, 1.0f)] [SerializeField] private float _borderAlpha = 1.0f;
 
-    [Header("4. Overlay (이펙트/덮개) 설정")]
+    [Header("5. Overlay (이펙트/덮개) 설정")]
     [SerializeField] private Color _overlayColor = Color.white;
     [Range(0.1f, 3.0f)] [SerializeField] private float _overlayGamma = 1.0f;
     [Range(0.0f, 1.0f)] [SerializeField] private float _overlayAlpha = 1.0f;
@@ -77,7 +83,8 @@ public class PlayFieldView : MonoBehaviour
     {
         SpriteRenderer[] allRenderers = GetComponentsInChildren<SpriteRenderer>(true);
 
-        SpriteRenderer newFill = null;
+        SpriteRenderer newBackground = null;
+        SpriteRenderer newCharacter = null;
         SpriteRenderer newGrid = null;
         SpriteRenderer newBorder = null;
         SpriteRenderer newOverlay = null;
@@ -86,8 +93,12 @@ public class PlayFieldView : MonoBehaviour
         {
             string childName = sr.name.ToLower().Trim();
 
-            if (childName.Contains("fill") || childName.Contains("bg") || childName.Contains("background"))
-                newFill = sr;
+            // CHR_ / CHR 조건 추가
+            if (childName.Contains("chr_") || childName.Contains("character") || childName.Contains("char") || childName.Contains("illustration") || childName.Contains("portrait"))
+                newCharacter = sr;
+            // BG_ / BG 조건 추가
+            else if (childName.Contains("bg_") || childName.Contains("bg") || childName.Contains("background") || childName.Contains("back"))
+                newBackground = sr;
             else if (childName.Contains("grid") || childName.Contains("tile") || childName.Contains("pattern"))
                 newGrid = sr;
             else if (childName.Contains("border") || childName.Contains("frame") || childName.Contains("wall"))
@@ -96,13 +107,14 @@ public class PlayFieldView : MonoBehaviour
                 newOverlay = sr;
         }
 
-        if (_fillRenderer != newFill || _gridRenderer != newGrid || 
-            _borderRenderer != newBorder || _overlayRenderer != newOverlay)
+        if (_backgroundRenderer != newBackground || _characterRenderer != newCharacter ||
+            _gridRenderer != newGrid || _borderRenderer != newBorder || _overlayRenderer != newOverlay)
         {
 #if UNITY_EDITOR
             if (!Application.isPlaying) Undo.RecordObject(this, "Auto Assign PlayField Renderers");
 #endif
-            _fillRenderer = newFill;
+            _backgroundRenderer = newBackground;
+            _characterRenderer = newCharacter;
             _gridRenderer = newGrid;
             _borderRenderer = newBorder;
             _overlayRenderer = newOverlay;
@@ -115,10 +127,11 @@ public class PlayFieldView : MonoBehaviour
 
     public void UpdateView()
     {
-        ApplyLayerSettings(_fillRenderer, _fillColor, _fillGamma, _fillAlpha, 0);
-        ApplyLayerSettings(_gridRenderer, _gridColor, _gridGamma, _gridAlpha, 1);
-        ApplyLayerSettings(_borderRenderer, _borderColor, _borderGamma, _borderAlpha, 2);
-        ApplyLayerSettings(_overlayRenderer, _overlayColor, _overlayGamma, _overlayAlpha, 3);
+        ApplyLayerSettings(_backgroundRenderer, _backgroundColor, _backgroundGamma, _backgroundAlpha, 0);
+        ApplyLayerSettings(_characterRenderer, _characterColor, _characterGamma, _characterAlpha, 1);
+        ApplyLayerSettings(_gridRenderer, _gridColor, _gridGamma, _gridAlpha, 2);
+        ApplyLayerSettings(_borderRenderer, _borderColor, _borderGamma, _borderAlpha, 3);
+        ApplyLayerSettings(_overlayRenderer, _overlayColor, _overlayGamma, _overlayAlpha, 4);
     }
 
     private void ApplyLayerSettings(SpriteRenderer renderer, Color color, float gamma, float alpha, int sortingOrder)
